@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Showcase Stream</title>
+<style>
+  :root{ --bg-core:#050505; --bg-mid:#020203; --bg-edge:#000; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:var(--bg-edge);}
+  body{
+    background:
+      radial-gradient(58% 48% at 43% 47%, rgba(15,28,78,0.40) 0%, rgba(7,7,16,0.48) 42%, rgba(0,0,0,0) 70%),
+      radial-gradient(54% 45% at 61% 59%, rgba(88,12,42,0.36) 0%, rgba(14,3,13,0.38) 48%, rgba(0,0,0,0) 74%),
+      radial-gradient(78% 60% at 50% 50%, rgba(18,18,23,0.86) 0%, rgba(4,4,6,0.92) 54%, rgba(0,0,0,1) 100%),
+      var(--bg-edge);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  body.dragging{cursor:grabbing;}
+
+  .glow{
+    position:fixed; left:50%;top:51%; width:86vmin;height:86vmin;
+    transform:translate(-50%,-50%);
+    background:
+      conic-gradient(from 220deg, rgba(0,0,0,0), rgba(20,76,255,0.12), rgba(255,22,75,0.15), rgba(255,188,48,0.08), rgba(94,48,255,0.15), rgba(0,0,0,0)),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0) 36%);
+    filter:blur(18px); pointer-events:none; z-index:0;
+  }
+  .vignette{
+    position:fixed;inset:0;
+    background:
+      radial-gradient(120% 95% at 50% 50%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.46) 76%, rgba(0,0,0,0.92) 100%),
+      linear-gradient(90deg, rgba(0,0,0,0.58), rgba(0,0,0,0) 19%, rgba(0,0,0,0) 81%, rgba(0,0,0,0.58));
+    pointer-events:none; z-index:7;
+  }
+  .stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .stage.back{ z-index:2; }
+  .stage.front{ z-index:5; }
+  .ring{ position:relative; transform-style:preserve-3d; will-change:transform; }
+
+  .headline-group{
+    position:fixed;
+    left:50%;
+    top:50%;
+    z-index:3;
+    transform:translate(-50%,-50%);
+    width:max-content;
+    pointer-events:none;
+  }
+  .headline{
+    position:relative;
+    color:#fff;
+    font-weight:900;
+    letter-spacing:0;
+    line-height:0.9;
+    text-align:center;
+    text-transform:uppercase;
+    pointer-events:none;
+    text-shadow:0 2px 24px rgba(0,0,0,0.54);
+  }
+  .headline span{
+    display:block;
+    white-space:nowrap;
+    font-size:72px;
+  }
+  .headline span:first-child{
+    color:rgba(255,255,255,0.78);
+  }
+  .headline span:last-child{
+    font-size:72px;
+  }
+  .side-note{
+    position:absolute;
+    color:#fff;
+    font-size:clamp(13px, 1.1vw, 18px);
+    font-weight:200;
+    line-height:1.02;
+    pointer-events:none;
+    text-transform:none;
+  }
+  .side-note.left{ right:calc(100% + 20px); bottom:0; }
+  .side-note.right{ left:calc(100% + 20px); top:0; }
+
+  /* card = a real 3D curved surface built from angled vertical slices */
+  .card{
+    position:absolute; left:50%;top:50%;
+    transform-style:preserve-3d; will-change:transform;
+  }
+  .slice{
+    position:absolute; left:50%;top:50%;
+    background-repeat:no-repeat;
+    backface-visibility:visible;
+    will-change:transform;
+  }
+  /* depth dimmer, coplanar with each slice so it fades on both faces */
+  .slice .dim{
+    position:absolute; inset:0;
+    background:linear-gradient(135deg, rgba(1,1,4,0.98), rgba(6,4,16,0.92));
+    opacity:var(--fade,0);
+    pointer-events:none;
+  }
+
+  @media (max-width: 720px){
+    .headline{
+      line-height:0.94;
+    }
+    .headline span{
+      font-size:clamp(15px, 5.5vw, 22px);
+    }
+    .headline span:last-child{
+      font-size:clamp(10px, 3vw, 12px);
+    }
+    .side-note{ display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="headline-group">
+    <h1 class="headline" aria-label="LAILAI LAB COLLECTION ADDED">
+      <span>LAILAI LAB</span>
+      <span>COLLECTION ADDED</span>
+    </h1>
+    <div class="side-note left">(50+) Visuals<br>Collection<br>Added,</div>
+    <div class="side-note right">LAILAI LAB<br>Collection<br>Added</div>
+  </div>
+  <div class="stage back"><div class="ring" id="ringBack"></div></div>
+  <div class="stage front"><div class="ring" id="ringFront"></div></div>
+  <div class="vignette"></div>
+
+<script>
+(function(){
+  const ringBack = document.getElementById('ringBack');
+  const ringFront = document.getElementById('ringFront');
+  const rings = [ringBack, ringFront];
+
+  const COUNT = 12;             // cards around the ring
+  const PADDING = 0.02;         // Padding 2%
+  const CORNER_RADIUS = 0.48;   // larger rounded card corners
+  const TILT = -35;             // Ring tilt
+  const AXIS_LEAN = 25;         // center axis leans to the right
+  const RING_SIZE = 0.98;       // Ring size
+  const RADIUS_SCALE = 1.04;    // base 3D ring radius
+  const FINAL_RADIUS_SCALE = 0.98;  // final 3D ring radius scale
+  const CARD_SIZE = 0.25;       // Card size
+  const CARD_SCALE = 0.650;     // card area increased by 50% from the previous 0.531 scale
+  const CARD_ARC_DEG = 36;      // how many degrees of a cylinder each card wraps. higher = more curved
+  const CURVE_DIR = 1;          // 1 = side edges bend back/inward (convex to viewer); -1 = concave
+  const N_SLICES = 40;          // slices per card (smoother curve)
+  const CARD_GAP = 0.20;        // baseline visible gap, relative to card width
+  const CARD_GAP_SCALE = 0.580; // spacing between cards reduced by another 30%
+  const BACK_FADE = 0.62;       // Back fade
+  const PERSPECTIVE = 0.25;     // Perspective
+  const REV_SECONDS = 18;       // seconds for one full rotation
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const CARD_TEXTURES = [
+    {src:'./card-texture-1.png', width:480, height:854},
+    {src:'./card-texture-2.png', width:480, height:853},
+    {src:'./card-texture-3.png', width:480, height:853},
+    {src:'./card-texture-4.png', width:480, height:853},
+    {src:'./card-texture-5.png', width:480, height:854},
+    {src:'./card-texture-6.png', width:480, height:1038},
+    {src:'./card-texture-7.png', width:480, height:640},
+    {src:'./card-texture-8.png', width:480, height:1039}
+  ];
+  CARD_TEXTURES.forEach(t=>{
+    t.bitmap = new Image();
+    t.bitmap.src = t.src;
+  });
+
+  function createCard(parent){
+    const el = document.createElement('div');
+    el.className = 'card';
+    const slices = [];
+    for(let j=0;j<N_SLICES;j++){
+      const s = document.createElement('div');
+      s.className = 'slice';
+      const dim = document.createElement('div');
+      dim.className = 'dim';
+      s.appendChild(dim);
+      el.appendChild(s);
+      slices.push(s);
+    }
+    parent.appendChild(el);
+    return {el, slices};
+  }
+
+  function buildRotatedTexture(card, targetW, targetH){
+    const tex = card.texture;
+    const img = tex.bitmap;
+    if(!img.complete || !img.naturalWidth || !img.naturalHeight){
+      return {src:tex.src, width:tex.width, height:tex.height, ready:false};
+    }
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.ceil(targetW * dpr));
+    canvas.height = Math.max(1, Math.ceil(targetH * dpr));
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(dpr, dpr);
+    ctx.translate(targetW / 2, targetH / 2);
+    ctx.rotate(card.textureAngle);
+
+    const diagonal = Math.hypot(targetW, targetH);
+    const scale = Math.max(diagonal / img.naturalWidth, diagonal / img.naturalHeight);
+    const drawW = img.naturalWidth * scale;
+    const drawH = img.naturalHeight * scale;
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+
+    try{
+      return {src:canvas.toDataURL('image/png'), width:targetW, height:targetH, ready:true};
+    }catch(error){
+      return {src:tex.src, width:tex.width, height:tex.height, ready:false};
+    }
+  }
+
+  function pickTextureSequence(count){
+    if(CARD_TEXTURES.length <= 1){
+      return Array.from({length:count}, () => CARD_TEXTURES[0]);
+    }
+
+    const sequence = [];
+    for(let i=0;i<count;i++){
+      const prev = sequence[i - 1];
+      let pool = CARD_TEXTURES.filter(tex => tex !== prev);
+      if(i === count - 1 && sequence[0] && pool.length > 1){
+        pool = pool.filter(tex => tex !== sequence[0]);
+      }
+      sequence.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    return sequence;
+  }
+
+  // --- build cards ---
+  const cards = [];
+  const step = 360 / COUNT;
+  const start = -90;
+  const textureSequence = pickTextureSequence(COUNT);
+  for(let i=0;i<COUNT;i++){
+    const base = start + step * i;
+    cards.push({
+      back: createCard(ringBack),
+      front: createCard(ringFront),
+      base,
+      texture: textureSequence[i],
+      textureAngle: Math.random() * Math.PI * 2,
+      renderedTexture: null,
+      renderedTextureKey: ''
+    });
+  }
+
+  // --- responsive sizing + slice layout (the actual 3D curve) ---
+  let R, cardW, cardH;
+  function sizeToViewport(){
+    const unit = Math.min(window.innerWidth, window.innerHeight) * (1 - PADDING * 2);
+    const fitDenominator = 1 + (1 + CARD_GAP) / Math.sin(Math.PI / COUNT);
+    const viewportFill = window.innerWidth < 640 ? 0.68 : 0.86;
+    const cardWidthForViewport = (window.innerWidth * viewportFill) / fitDenominator;
+    const baseCardW = Math.min(unit * CARD_SIZE, cardWidthForViewport);
+    cardW = baseCardW * CARD_SCALE;
+    cardH = cardW;
+    const angleSin = Math.sin(Math.PI / COUNT);
+    const baseSlotGap = Math.max(unit * 0.012, baseCardW * CARD_GAP);
+    const baseRadiusForEqualGaps = (baseCardW + baseSlotGap) / (2 * angleSin);
+    const currentRadius = Math.max(baseCardW * 0.45, (unit * RING_SIZE - baseCardW) / 2, baseRadiusForEqualGaps) * RADIUS_SCALE;
+    const targetGap = Math.max(0, 2 * currentRadius * angleSin - baseCardW) * CARD_GAP_SCALE;
+    R = Math.max(cardW * 0.45, (cardW + targetGap) / (2 * angleSin)) * FINAL_RADIUS_SCALE;
+    const persp = unit * (0.74 + PERSPECTIVE * 2.2);
+    rings.forEach(ring=>{ ring.parentElement.style.perspective = persp + 'px'; });
+
+    const textureKey = Math.round(cardW) + 'x' + Math.round(cardH);
+    cards.forEach(c=>{
+      if(c.renderedTextureKey !== textureKey || !c.renderedTexture || !c.renderedTexture.ready){
+        c.renderedTexture = buildRotatedTexture(c, cardW, cardH);
+        c.renderedTextureKey = c.renderedTexture.ready ? textureKey : '';
+      }
+    });
+
+    const arc = CARD_ARC_DEG * Math.PI / 180;
+    const half = arc / 2;
+    const r = cardW / arc;                 // cylinder radius so arc length == cardW
+    const sliceW = cardW / N_SLICES;
+    const wRen = sliceW + 2;                // slight overlap hides seams
+    const rad = Math.max(1, Math.min(cardW, cardH) * CORNER_RADIUS);
+    function layoutLayer(layer, c){
+      layer.el.style.width = cardW + 'px';
+      layer.el.style.height = cardH + 'px';
+      layer.el.style.marginLeft = (-cardW/2) + 'px';
+      layer.el.style.marginTop  = (-cardH/2) + 'px';
+      const tex = c.renderedTexture || c.texture;
+      const imgW = tex.width;
+      const imgH = tex.height;
+      const coverScale = Math.max(cardW / imgW, cardH / imgH);
+      const bgW = imgW * coverScale;
+      const bgH = imgH * coverScale;
+      const bgX = (cardW - bgW) / 2;
+      const bgY = (cardH - bgH) / 2;
+      const url = 'url("' + tex.src + '")';
+      layer.slices.forEach((s,j)=>{
+        const phi = -half + (j + 0.5) / N_SLICES * arc;   // this slice's angle on the cylinder
+        const x = r * Math.sin(phi);
+        const z = CURVE_DIR * (r * Math.cos(phi) - r);    // center flush, side edges recede
+        s.style.width  = wRen + 'px';
+        s.style.height = cardH + 'px';
+        s.style.marginLeft = (-wRen/2) + 'px';
+        s.style.marginTop  = (-cardH/2) + 'px';
+        const cardX = (-(j*sliceW) + 0.6);
+        s.style.backgroundImage = url;
+        s.style.backgroundColor = 'rgba(214,214,224,0.82)';
+        s.style.backgroundBlendMode = 'multiply';
+        s.style.mixBlendMode = 'normal';
+        s.style.backgroundSize = bgW.toFixed(2) + 'px ' + bgH.toFixed(2) + 'px';
+        s.style.backgroundPosition = (bgX + cardX).toFixed(2) + 'px ' + bgY.toFixed(2) + 'px';
+        s.style.filter = 'none';
+        s.style.transform =
+          'translate3d(' + x.toFixed(2) + 'px,0,' + z.toFixed(2) + 'px) rotateY(' + (CURVE_DIR*phi*180/Math.PI).toFixed(3) + 'deg)';
+        if(j === 0){ s.style.borderRadius = rad+'px 0 0 '+rad+'px'; s.style.overflow='hidden'; }
+        else if(j === N_SLICES-1){ s.style.borderRadius = '0 '+rad+'px '+rad+'px 0'; s.style.overflow='hidden'; }
+        else { s.style.borderRadius='0'; s.style.overflow='visible'; }
+      });
+    }
+
+    cards.forEach(c=>{
+      layoutLayer(c.back, c);
+      layoutLayer(c.front, c);
+    });
+  }
+
+  sizeToViewport();
+  CARD_TEXTURES.forEach(t=>t.bitmap.addEventListener('load', sizeToViewport));
+  window.addEventListener('resize', sizeToViewport);
+  rings.forEach(ring=>{
+    ring.style.transform = `rotateZ(${AXIS_LEAN}deg) rotateX(${TILT}deg)`;
+  });
+
+  // --- interaction: drag to spin, release to resume auto ---
+  let spin = 0, dragVel = 0, dragging = false, lastX = 0;
+  const DRAG_SENS = 0.32;
+  window.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; dragVel=0; document.body.classList.add('dragging'); });
+  window.addEventListener('pointermove', e=>{ if(!dragging) return; const dx=e.clientX-lastX; lastX=e.clientX; spin+=dx*DRAG_SENS; dragVel=dx*DRAG_SENS; });
+  window.addEventListener('pointerup', ()=>{ dragging=false; document.body.classList.remove('dragging'); });
+
+  // --- render loop ---
+  const autoDeg = 360 / REV_SECONDS;
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(0.05, (now - last)/1000); last = now;
+    if(!dragging){
+      if(!prefersReduced) spin -= autoDeg * dt;
+      spin += dragVel; dragVel *= 0.92;
+      if(Math.abs(dragVel) < 0.002) dragVel = 0;
+    }
+    for(const c of cards){
+      const ang = c.base + spin;
+      const transform = `rotateY(${ang}deg) translateZ(${R}px)`;
+      c.back.el.style.transform = transform;
+      c.front.el.style.transform = transform;
+      const f = (Math.cos(ang*Math.PI/180) + 1) / 2;      // 1 front -> 0 back
+      const fade = (BACK_FADE*(1-f)).toFixed(3);
+      c.back.el.style.setProperty('--fade', fade);
+      c.front.el.style.setProperty('--fade', fade);
+
+      // Split the same rotating card across two z-layers so the headline
+      // visually passes through the middle of the 3D ring. Do not fade the
+      // 3D parent with opacity: intermediate opacity flattens preserve-3d.
+      const depth = Math.cos(ang*Math.PI/180);
+      const isFront = depth > 0;
+      c.front.el.style.visibility = isFront ? 'visible' : 'hidden';
+      c.back.el.style.visibility = isFront ? 'hidden' : 'visible';
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
