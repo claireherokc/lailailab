@@ -1,0 +1,76 @@
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; }
+body { color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+button, a { color: inherit; font: inherit; }
+button { border: 0; }
+a { text-decoration: none; }
+
+.lab-shell { position: fixed; inset: 0; overflow: hidden; background: #000; }
+.core-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 0; }
+.corner-mark, .lab-nav, .drag-note { position: fixed; z-index: 10; color: rgba(255,255,255,.82); font-size: 11px; font-weight: 300; line-height: 1.02; }
+.corner-mark { left: 22px; top: 20px; }
+.lab-nav { top: 20px; right: 22px; display: flex; gap: 18px; }
+.lab-nav button, .panel-header button { padding: 0; background: transparent; cursor: pointer; font-size: 11px; line-height: 1; }
+.lab-nav sup { font-size: 7px; color: rgba(255,255,255,.5); }
+.lab-nav button:hover, .lab-nav button:focus-visible, .panel-header button:hover, .panel-header button:focus-visible { opacity: .56; outline: none; }
+.drag-note { left: 22px; bottom: 19px; font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.42); }
+
+.panel-layer, .project-layer { position: fixed; inset: 0; z-index: 20; display: flex; justify-content: flex-end; background: rgba(0,0,0,.2); animation: fade-in .25s ease both; }
+.panel-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: rgba(0,0,0,.42); cursor: default; }
+.lab-panel { position: relative; z-index: 2; width: min(680px, 58vw); height: 100%; overflow-y: auto; padding: 22px 24px 30px; background: rgba(5,5,7,.94); box-shadow: -20px 0 80px rgba(0,0,0,.45); backdrop-filter: blur(24px); animation: panel-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 300; line-height: 1; }
+.lab-panel > h1, .about-panel > h1 { margin: 12vh 0 8vh; color: #fff; font-size: clamp(60px, 8vw, 118px); font-weight: 900; line-height: .78; letter-spacing: -.075em; }
+.work-list { border-top: 1px solid rgba(255,255,255,.34); }
+.work-list button { width: 100%; display: grid; grid-template-columns: 36px 1.2fr 1fr 36px; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,.24); background: transparent; text-align: left; cursor: pointer; }
+.work-list span, .work-list i, .work-list em { font-size: 9px; font-weight: 300; font-style: normal; line-height: 1; }
+.work-list i { color: rgba(255,255,255,.55); }
+.work-list b { font-size: 17px; line-height: 1; letter-spacing: -.035em; }
+.work-list button:hover b, .work-list button:focus-visible b { transform: translateX(8px); }
+.work-list b { transition: transform .25s ease; }
+.work-list button:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+
+.about-panel { display: flex; flex-direction: column; }
+.about-panel > h1 { margin-bottom: 6vh; }
+.about-copy { margin-top: auto; display: grid; grid-template-columns: 1.3fr 1fr; gap: 60px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.34); }
+.about-copy > p { margin: 0; max-width: 30em; font-size: 15px; line-height: 1.75; font-weight: 300; }
+.about-copy dl { display: grid; grid-template-columns: 1fr; gap: 28px; margin: 0; }
+.about-copy dt { margin-bottom: 8px; color: rgba(255,255,255,.5); font-size: 9px; text-transform: uppercase; }
+.about-copy dd { margin: 0; font-size: 11px; font-weight: 300; line-height: 1.45; }
+
+.project-layer { justify-content: center; align-items: center; padding: 8vh 8vw; }
+.project-sheet { position: relative; z-index: 2; width: min(1100px, 100%); height: min(700px, 100%); display: flex; flex-direction: column; padding: 22px 24px 24px; border: 1px solid rgba(255,255,255,.23); background: rgba(3,3,5,.86); backdrop-filter: blur(28px); box-shadow: 0 35px 100px rgba(0,0,0,.55); animation: sheet-in .38s ease both; }
+.project-heading { margin: auto 0; }
+.project-heading > span { display: block; margin-bottom: 24px; color: rgba(255,255,255,.56); font-size: 11px; font-weight: 300; line-height: 1.15; }
+.project-heading h1 { max-width: 10em; margin: 0; font-size: clamp(64px, 10vw, 150px); font-weight: 900; line-height: .78; letter-spacing: -.08em; text-transform: uppercase; }
+.project-heading > p { margin: 18px 0 0; font-size: 17px; letter-spacing: .18em; }
+.project-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.34); }
+.project-footer > p { max-width: 38em; margin: 0; font-size: 13px; font-weight: 300; line-height: 1.65; }
+.project-footer button { padding: 0; background: transparent; cursor: pointer; font-size: 11px; text-transform: uppercase; }
+
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes panel-in { from { transform: translateX(100%); } }
+@keyframes sheet-in { from { opacity: 0; transform: scale(.97); } }
+
+@media (max-width: 720px) {
+  .corner-mark { left: 14px; top: 14px; font-size: 9px; }
+  .lab-nav { top: 15px; right: 14px; gap: 13px; }
+  .lab-nav button { font-size: 9px; }
+  .drag-note { left: 14px; bottom: 13px; font-size: 7px; }
+  .lab-panel { width: 100%; padding: 16px 14px 22px; background: rgba(3,3,5,.97); }
+  .lab-panel > h1, .about-panel > h1 { margin: 15vh 0 9vh; font-size: 19vw; }
+  .work-list button { grid-template-columns: 24px 1fr 32px; gap: 8px; padding: 14px 0; }
+  .work-list i { display: none; }
+  .work-list b { font-size: 15px; }
+  .about-copy { grid-template-columns: 1fr; gap: 35px; }
+  .about-copy > p { font-size: 14px; }
+  .project-layer { padding: 44px 10px 10px; }
+  .project-sheet { height: 100%; padding: 16px 14px; }
+  .project-heading h1 { font-size: 20vw; line-height: .82; }
+  .project-footer { display: grid; gap: 24px; }
+  .project-footer > p { font-size: 12px; }
+  .project-footer button { justify-self: end; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

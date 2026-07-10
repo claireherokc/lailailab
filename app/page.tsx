@@ -57,7 +57,7 @@ export default function Home() {
         aria-label="可横向拖拽旋转的 LAILAI LAB 作品集合"
       />
 
-      <div className="corner-mark" aria-hidden="true">LAILAI LAB<br />PORTFOLIO<br />2024—26</div>
+      <div className="corner-mark" aria-hidden="true">LAILAI LAB<br />PORTFOLIO<br />VERSION 2.0</div>
       <nav className="lab-nav" aria-label="作品集导航">
         <button onClick={() => setPanel("index")}>Index <sup>{projects.length}</sup></button>
         <button onClick={() => setPanel("about")}>About</button>
