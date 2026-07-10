@@ -43,7 +43,7 @@
     pointer-events:none;
   }
   .stage.back{ z-index:2; }
-  .stage.front{ z-index:5; }
+  .stage.front{ z-index:5; pointer-events:auto; }
   .ring{ position:relative; transform-style:preserve-3d; will-change:transform; }
 
   .headline-group{
@@ -94,6 +94,8 @@
     position:absolute; left:50%;top:50%;
     transform-style:preserve-3d; will-change:transform;
   }
+  .stage.front .card{ cursor:pointer; }
+  .stage.front .card:focus-visible{ outline:1px solid rgba(255,255,255,0.9); outline-offset:5px; }
   .slice{
     position:absolute; left:50%;top:50%;
     background-repeat:no-repeat;
@@ -257,9 +259,16 @@
   const textureSequence = pickTextureSequence(COUNT);
   for(let i=0;i<COUNT;i++){
     const base = start + step * i;
+    const back = createCard(ringBack);
+    const front = createCard(ringFront);
+    back.el.dataset.projectIndex = String(i);
+    front.el.dataset.projectIndex = String(i);
+    front.el.setAttribute('role', 'button');
+    front.el.setAttribute('aria-label', `Open project ${String(i + 1).padStart(2, '0')}`);
+    front.el.tabIndex = -1;
     cards.push({
-      back: createCard(ringBack),
-      front: createCard(ringFront),
+      back,
+      front,
       base,
       texture: textureSequence[i],
       textureAngle: Math.random() * Math.PI * 2,
@@ -354,10 +363,41 @@
 
   // --- interaction: drag to spin, release to resume auto ---
   let spin = 0, dragVel = 0, dragging = false, lastX = 0;
+  let downX = 0, downY = 0, downProject = null, moved = false;
   const DRAG_SENS = 0.32;
-  window.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; dragVel=0; document.body.classList.add('dragging'); });
-  window.addEventListener('pointermove', e=>{ if(!dragging) return; const dx=e.clientX-lastX; lastX=e.clientX; spin+=dx*DRAG_SENS; dragVel=dx*DRAG_SENS; });
-  window.addEventListener('pointerup', ()=>{ dragging=false; document.body.classList.remove('dragging'); });
+  function openProject(index){
+    window.parent.postMessage({type:'lailai:open-project', index:Number(index)}, window.location.origin);
+  }
+  window.addEventListener('pointerdown', e=>{
+    dragging=true;
+    lastX=downX=e.clientX;
+    downY=e.clientY;
+    moved=false;
+    dragVel=0;
+    const targetCard = e.target.closest && e.target.closest('.stage.front .card[data-project-index]');
+    downProject = targetCard ? targetCard.dataset.projectIndex : null;
+    document.body.classList.add('dragging');
+  });
+  window.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dx=e.clientX-lastX;
+    lastX=e.clientX;
+    if(Math.hypot(e.clientX-downX, e.clientY-downY) > 7) moved=true;
+    spin+=dx*DRAG_SENS;
+    dragVel=dx*DRAG_SENS;
+  });
+  window.addEventListener('pointerup', ()=>{
+    dragging=false;
+    document.body.classList.remove('dragging');
+    if(!moved && downProject !== null) openProject(downProject);
+    downProject=null;
+  });
+  window.addEventListener('keydown', e=>{
+    const targetCard = e.target.closest && e.target.closest('.stage.front .card[data-project-index]');
+    if(!targetCard || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    openProject(targetCard.dataset.projectIndex);
+  });
 
   // --- render loop ---
   const autoDeg = 360 / REV_SECONDS;
@@ -386,6 +426,8 @@
       const isFront = depth > 0;
       c.front.el.style.visibility = isFront ? 'visible' : 'hidden';
       c.back.el.style.visibility = isFront ? 'hidden' : 'visible';
+      c.front.el.tabIndex = isFront ? 0 : -1;
+      c.front.el.setAttribute('aria-hidden', isFront ? 'false' : 'true');
     }
     requestAnimationFrame(frame);
   }
