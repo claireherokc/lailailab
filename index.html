@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="LAILAI LAB Version 2.0 — 莱莱个人作品集">
+  <title>LAILAI LAB — Version 2.0</title>
+  <link rel="stylesheet" href="./pages.css">
+</head>
+<body>
+  <main class="lab-shell">
+    <iframe class="core-frame" src="./public/lailai-core.html" title="LAILAI LAB 3D 作品环" aria-label="可横向拖拽旋转的 LAILAI LAB 作品集合"></iframe>
+    <div class="corner-mark" aria-hidden="true">LAILAI LAB<br>PORTFOLIO<br>VERSION 2.0</div>
+    <nav class="lab-nav" aria-label="作品集导航">
+      <button data-open="index">Index <sup>12</sup></button>
+      <button data-open="about">About</button>
+    </nav>
+    <div class="drag-note" aria-hidden="true">DRAG TO ROTATE ↔</div>
+    <div id="overlay-root"></div>
+  </main>
+  <script>
+    const projects = [
+      ["Soft Signal","柔软信号","Brand Direction","2026","为感官护理品牌建立一套轻盈而有触感的视觉语言，让颜色、材质与文字形成同一种呼吸。"],
+      ["After Rain","雨后","Visual Identity","2026","从雨水折射与城市反光出发，为独立音乐企划设计动态识别与发行视觉。"],
+      ["Daily Orbit","日常轨道","Digital Experience","2025","把日常习惯转化为视觉轨迹的数字产品，在微小记录里看见持续发生的改变。"],
+      ["Moss Archive","苔藓档案","Editorial Design","2025","采集城市边缘的微型生态，以编号、拓印与摄影构成一套关于缓慢生长的视觉档案。"],
+      ["Night Market","夜市电波","Campaign","2025","从霓虹、叫卖与摊位手写字中提炼一套高能量的城市夜游活动视觉。"],
+      ["New Folk","新民艺","Art Direction","2025","传统手工艺与当代生活方式的重新连接，以克制的编排承载温暖的手作痕迹。"],
+      ["Echo Room","回声房间","Spatial Visuals","2024","为声音展览设计的空间图形系统，让信息在尺度、回声与留白之间移动。"],
+      ["Little Worlds","小小世界","Illustration","2024","一组关于观察与想象的插画实验，把普通物件变成可以短暂停留的微型世界。"],
+      ["Blue Hour","蓝色时刻","Motion Identity","2024","为影像栏目建立随时间变化的动态片头，在日与夜之间保留一段未命名的蓝。"],
+      ["Open Kitchen","开放厨房","Brand System","2024","为社区餐桌打造友好、直接的品牌系统，鼓励人们带一道菜，也带来一段故事。"],
+      ["Tender Type","柔软字体","Type Experiment","2024","一套关于触觉、拉伸与情绪的字体实验，让字形在阅读与图像之间自由变化。"],
+      ["Field Notes","野外笔记","Publication","2023","把旅行中的声音、植物、路标与片段文字整理为可持续生长的视觉出版物。"]
+    ];
+    const root = document.getElementById("overlay-root");
+    const esc = value => value.replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    function close(){ root.innerHTML = ""; }
+    function header(label){ return `<header class="panel-header"><span>(${label})</span><button data-close>Close ×</button></header>`; }
+    function showProject(index){
+      const p = projects[index];
+      root.innerHTML = `<div class="project-layer" role="dialog" aria-modal="true" aria-labelledby="project-title"><button class="panel-backdrop" data-close aria-label="关闭作品详情"></button><article class="project-sheet">${header(`${String(index+1).padStart(2,"0")} / ${projects.length}`)}<div class="project-heading"><span>${esc(p[2])}<br>${esc(p[3])}</span><h1 id="project-title">${esc(p[0])}</h1><p>${esc(p[1])}</p></div><div class="project-footer"><p>${esc(p[4])}</p><button data-next="${(index+1)%projects.length}">Next project →</button></div></article></div>`;
+    }
+    function showIndex(){
+      const rows = projects.map((p,i)=>`<button data-project="${i}"><span>${String(i+1).padStart(2,"0")}</span><b>${esc(p[0])}</b><i>${esc(p[2])}</i><em>${esc(p[3])}</em></button>`).join("");
+      root.innerHTML = `<div class="panel-layer" role="dialog" aria-modal="true" aria-labelledby="index-title"><button class="panel-backdrop" data-close aria-label="关闭面板"></button><section class="lab-panel">${header("Selected Works")}<h1 id="index-title">WORK<br>INDEX</h1><div class="work-list">${rows}</div></section></div>`;
+    }
+    function showAbout(){
+      root.innerHTML = `<div class="panel-layer" role="dialog" aria-modal="true" aria-labelledby="about-title"><button class="panel-backdrop" data-close aria-label="关闭面板"></button><section class="lab-panel about-panel">${header("About")}<h1 id="about-title">IDEAS<br>MADE<br>VISIBLE.</h1><div class="about-copy"><p>莱莱是一位关注品牌、视觉与数字体验的独立设计师。LAILAI LAB 收集商业合作，也保留尚未被定义的个人练习。</p><dl><div><dt>Services</dt><dd>Creative direction<br>Brand identity<br>Digital experience<br>Editorial & campaign</dd></div><div><dt>Contact</dt><dd><a href="mailto:hello@lailailab.studio">hello@lailailab.studio</a><br>Based in China<br>Working worldwide</dd></div></dl></div></section></div>`;
+    }
+    document.addEventListener("click", event => {
+      const target = event.target.closest("button"); if(!target) return;
+      if(target.dataset.close !== undefined) close();
+      if(target.dataset.open === "index") showIndex();
+      if(target.dataset.open === "about") showAbout();
+      if(target.dataset.project !== undefined) showProject(Number(target.dataset.project));
+      if(target.dataset.next !== undefined) showProject(Number(target.dataset.next));
+    });
+    window.addEventListener("message", event => {
+      if(event.origin === location.origin && event.data?.type === "lailai:open-project") showProject(Number(event.data.index));
+    });
+    window.addEventListener("keydown", event => { if(event.key === "Escape") close(); });
+  </script>
+</body>
+</html>
